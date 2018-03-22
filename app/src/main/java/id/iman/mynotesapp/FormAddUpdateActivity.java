@@ -1,8 +1,10 @@
-package id.iman.mynotesapp.activities;
+package id.iman.mynotesapp;
 
 import android.app.AlertDialog;
+import android.content.ContentValues;
 import android.content.DialogInterface;
-import android.content.Intent;
+import android.database.Cursor;
+import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -16,11 +18,16 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import id.iman.mynotesapp.R;
 import id.iman.mynotesapp.db.NoteHelper;
 import id.iman.mynotesapp.entity.Note;
 
-public class FormAddUpdateActivity extends AppCompatActivity implements View.OnClickListener {
+import static id.iman.mynotesapp.db.DatabaseContract.CONTENT_URI;
+import static id.iman.mynotesapp.db.DatabaseContract.NoteColumns.DATE;
+import static id.iman.mynotesapp.db.DatabaseContract.NoteColumns.DESCRIPTION;
+import static id.iman.mynotesapp.db.DatabaseContract.NoteColumns.TITLE;
+
+public class FormAddUpdateActivity extends AppCompatActivity
+        implements View.OnClickListener {
     EditText edtTitle, edtDescription;
     Button btnSubmit;
 
@@ -28,6 +35,7 @@ public class FormAddUpdateActivity extends AppCompatActivity implements View.OnC
     public static String EXTRA_POSITION = "extra_position";
 
     private boolean isEdit = false;
+
     public static int REQUEST_ADD = 100;
     public static int RESULT_ADD = 101;
     public static int REQUEST_UPDATE = 200;
@@ -35,13 +43,14 @@ public class FormAddUpdateActivity extends AppCompatActivity implements View.OnC
     public static int RESULT_DELETE = 301;
 
     private Note note;
-    private int position;
+    //private int position;
     private NoteHelper noteHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_form_add_update);
+
         edtTitle = (EditText) findViewById(R.id.edt_title);
         edtDescription = (EditText) findViewById(R.id.edt_description);
         btnSubmit = (Button) findViewById(R.id.btn_submit);
@@ -50,19 +59,30 @@ public class FormAddUpdateActivity extends AppCompatActivity implements View.OnC
         noteHelper = new NoteHelper(this);
         noteHelper.open();
 
-        note = getIntent().getParcelableExtra(EXTRA_NOTE);
+        // Uri yang di dapatkan disini akan digunakan untuk ambil data dari provider
+        // content://com.dicoding.mynotesapp/note/id
+        // Jika uri nya kosong berarti modenya adalah insert
+        Uri uri = getIntent().getData();
 
-        if (note != null) {
-            position = getIntent().getIntExtra(EXTRA_POSITION, 0);
-            isEdit = true;
+        if (uri != null) {
+            Cursor cursor = getContentResolver().query(uri, null, null, null, null);
+
+            if (cursor != null){
+
+                if(cursor.moveToFirst()) note = new Note(cursor);
+                cursor.close();
+            }
         }
 
         String actionBarTitle = null;
         String btnTitle = null;
 
-        if (isEdit) {
+        if (note != null) {
+            isEdit = true;
+
             actionBarTitle = "Ubah";
             btnTitle = "Update";
+
             edtTitle.setText(note.getTitle());
             edtDescription.setText(note.getDescription());
         } else {
@@ -85,55 +105,52 @@ public class FormAddUpdateActivity extends AppCompatActivity implements View.OnC
     }
 
     @Override
-    public void onClick(View v) {
-        if (v.getId() == R.id.btn_submit) {
+    public void onClick(View view) {
+        if (view.getId() == R.id.btn_submit) {
             String title = edtTitle.getText().toString().trim();
             String description = edtDescription.getText().toString().trim();
 
             boolean isEmpty = false;
 
-            /*
+             /*
             Jika fieldnya masih kosong maka tampilkan error
              */
+
             if (TextUtils.isEmpty(title)) {
                 isEmpty = true;
                 edtTitle.setError("Field can not be blank");
             }
 
             if (!isEmpty) {
-                Note newNote = new Note();
-                newNote.setTitle(title);
-                newNote.setDescription(description);
 
-                Intent intent = new Intent();
+                // Gunakan contentvalues untuk menampung data
+                ContentValues values = new ContentValues();
+                values.put(TITLE,title);
+                values.put(DESCRIPTION,description);
 
                 /*
                 Jika merupakan edit setresultnya UPDATE, dan jika bukan maka setresultnya ADD
                  */
                 if (isEdit) {
-                    newNote.setDate(note.getDate());
-                    newNote.setId(note.getId());
-                    noteHelper.update(newNote);
 
-                    intent.putExtra(EXTRA_POSITION, position);
-                    setResult(RESULT_UPDATE, intent);
+                    // Gunakan uri dari intent activity ini
+                    // content://com.dicoding.mynotesapp/note/id
+                    getContentResolver().update(getIntent().getData(),values, null, null);
+
+                    setResult(RESULT_UPDATE);
                     finish();
                 } else {
-                    newNote.setDate(getCurrentDate());
-                    noteHelper.insert(newNote);
+                    values.put(DATE,getCurrentDate());
+
+                    // Gunakan content uri untuk insert
+                    // content://com.dicoding.mynotesapp/note/
+                    getContentResolver().insert(CONTENT_URI,values);
 
                     setResult(RESULT_ADD);
                     finish();
                 }
             }
         }
-    }
-
-    private String getCurrentDate() {
-        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-        Date date = new Date();
-
-        return dateFormat.format(date);
     }
 
     @Override
@@ -150,6 +167,7 @@ public class FormAddUpdateActivity extends AppCompatActivity implements View.OnC
             case R.id.action_delete:
                 showAlertDialog(ALERT_DIALOG_DELETE);
                 break;
+
             case android.R.id.home:
                 showAlertDialog(ALERT_DIALOG_CLOSE);
                 break;
@@ -157,10 +175,12 @@ public class FormAddUpdateActivity extends AppCompatActivity implements View.OnC
         return super.onOptionsItemSelected(item);
     }
 
+
     @Override
     public void onBackPressed() {
         showAlertDialog(ALERT_DIALOG_CLOSE);
     }
+
 
     final int ALERT_DIALOG_CLOSE = 10;
     final int ALERT_DIALOG_DELETE = 20;
@@ -169,7 +189,8 @@ public class FormAddUpdateActivity extends AppCompatActivity implements View.OnC
     Konfirmasi dialog sebelum proses batal atau hapus
     close = 10
     delete = 20
-     */
+    */
+
     private void showAlertDialog(int type) {
         final boolean isDialogClose = type == ALERT_DIALOG_CLOSE;
         String dialogTitle = null, dialogMessage = null;
@@ -193,10 +214,11 @@ public class FormAddUpdateActivity extends AppCompatActivity implements View.OnC
                         if (isDialogClose) {
                             finish();
                         } else {
-                            noteHelper.delete(note.getId());
-                            Intent intent = new Intent();
-                            intent.putExtra(EXTRA_POSITION, position);
-                            setResult(RESULT_DELETE, intent);
+
+                            // Gunakan uri dari intent activity ini
+                            // content://com.dicoding.mynotesapp/note/id
+                            getContentResolver().delete(getIntent().getData(),null,null);
+                            setResult(RESULT_DELETE, null);
                             finish();
                         }
                     }
@@ -211,4 +233,10 @@ public class FormAddUpdateActivity extends AppCompatActivity implements View.OnC
 
     }
 
+    private String getCurrentDate() {
+        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+        Date date = new Date();
+
+        return dateFormat.format(date);
+    }
 }
