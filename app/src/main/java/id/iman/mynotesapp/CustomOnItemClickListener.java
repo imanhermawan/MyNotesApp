@@ -1,4 +1,4 @@
-package id.iman.mynotesapp.adapter;
+package id.iman.mynotesapp;
 
 import android.view.View;
 

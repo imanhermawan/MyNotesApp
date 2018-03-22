@@ -1,11 +1,11 @@
-package id.iman.mynotesapp.db;
+package id.iman.dicodingnotesapp;
 
 import android.database.Cursor;
 import android.net.Uri;
 import android.provider.BaseColumns;
 
 /**
- * Created by Iman on 19/03/2018.
+ * Created by Iman on 22/03/2018.
  */
 
 public class DatabaseContract {

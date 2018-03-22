@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="id.iman.mynotesapp">
-
-    <permission android:name="id.iman.mynotesapp.READ_DATABASE" android:protectionLevel="normal"/>
-    <permission android:name="id.iman.mynotesapp.WRITE_DATABASE" android:protectionLevel="normal"/>
+    package="id.iman.dicodingnotesapp">
+    
+    <uses-permission android:name="id.iman.mynotesapp.READ_DATABASE"/>
+    <uses-permission android:name="id.iman.mynotesapp.WRITE_DATABASE"/>
 
     <application
         android:allowBackup="true"
@@ -19,13 +19,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".FormAddUpdateActivity" />
-        <provider
-            android:authorities="id.iman.mynotesapp"
-            android:name=".provider.NoteProvider"
-            android:exported="true"
-            android:readPermission="id.iman.mynotesapp.READ_DATABASE"
-            android:writePermission="id.iman.mynotesapp.WRITE_DATABASE" />
+        <activity android:name=".FormActivity"></activity>
     </application>
 
 </manifest>
